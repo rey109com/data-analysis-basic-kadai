@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ダイレクトリクルーティング ダッシュボード</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 30px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .nav-tabs {
+            padding: 20px 0;
+        }
+
+        .nav-tab {
+            display: block;
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-tab.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-left-color: #fff;
+        }
+
+        .nav-tab i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* メインコンテンツ */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .content-header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-header h2 {
+            color: #2d3748;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .date-range {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        /* 入力セクション */
+        .input-section {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .generate-btn {
+            margin-top: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        /* タブコンテンツ */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* セクションヘッダー */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .toggle-all-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-all-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        /* 応募効果タブ */
+        .metrics-section {
+            margin-bottom: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .metric-card.hidden {
+            display: none;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .metric-card .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .metric-card h3 {
+            color: #718096;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex: 1;
+        }
+
+        .toggle-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-left: auto;
+        }
+
+        .toggle-icon.visible {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .toggle-icon.hidden-state {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .toggle-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .metric-card .value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .metric-card .unit {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .metric-card .change {
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .change.positive {
+            color: #48bb78;
+        }
+
+        .change.negative {
+            color: #f56565;
+        }
+
+        /* チャート関連 */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chart-card.hidden {
+            display: none;
+        }
+
+        .chart-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-card h3 {
+            color: #2d3748;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chart-canvas {
+            max-height: 350px;
+        }
+
+        /* 改善提案 */
+        .suggestions-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .suggestion-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #48bb78;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .suggestion-card.hidden {
+            display: none;
+        }
+
+        .suggestion-card .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-card h4 {
+            color: #2d3748;
+            font-size: 1.1rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .suggestion-card p {
+            color: #4a5568;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .priority-high {
+            border-left-color: #f56565;
+        }
+
+        .priority-medium {
+            border-left-color: #ed8936;
+        }
+
+        .priority-low {
+            border-left-color: #48bb78;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .priority-high .priority-badge {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .priority-medium .priority-badge {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .priority-low .priority-badge {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        /* ローディング */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- サイドバー -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>リクルーティング</h1>
+            <p>効果測定ダッシュボード</p>
+        </div>
+        <nav class="nav-tabs">
+            <a href="#" class="nav-tab active" data-tab="setup">
+                <i>⚙️</i> 設定・生成
+            </a>
+            <a href="#" class="nav-tab" data-tab="metrics">
+                <i>📊</i> 応募効果
+            </a>
+            <a href="#" class="nav-tab" data-tab="charts">
+                <i>📈</i> グラフ分析
+            </a>
+            <a href="#" class="nav-tab" data-tab="suggestions">
+                <i>💡</i> 改善提案
+            </a>
+        </nav>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="main-content">
+        <!-- セットアップタブ -->
+        <div id="setup" class="tab-content active">
+            <div class="content-header">
+                <h2>レポート設定・生成</h2>
+                <div class="date-range">
+                    <span id="current-date"></span>
+                </div>
+            </div>
+
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="user-input">分析したい課題・改善点を入力してください</label>
+                    <textarea id="user-input" placeholder="例：応募率が低下している、特定の年齢層からの応募が少ない、地方からの応募を増やしたい など"></textarea>
+                    <button class="generate-btn" onclick="generateReport()">レポート生成</button>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <p>データを分析中です...</p>
+            </div>
+        </div>
+
+        <!-- 応募効果タブ -->
+        <div id="metrics" class="tab-content">
+            <div class="content-header">
+                <h2>応募効果サマリー</h2>
+                <div class="date-range">過去30日間のデータ</div>
+            </div>
+
+            <!-- 基本効果指標 -->
+            <div class="metrics-section">
+                <div class="section-header">
+                    <div class="section-title">基本効果指標</div>
+                    <button class="toggle-all-btn" onclick="toggleAllMetrics('basic')">すべて表示/非表示</button>
+                </div>
+                <div class="metrics-grid" id="basic-metrics-grid">
+                    <!-- メトリクスカードはJavaScriptで生成 -->
+                </div>
+            </div>
+
+            <!-- 属性別分析 -->
+            <div class="metrics-section">
+                <div class="section-header">
+                    <div class="section-title">属性別分析</div>
+                    <button class="toggle-all-btn" onclick="toggleAllMetrics('demographic')">すべて表示/非表示</button>
+                </div>
+                <div class="metrics-grid" id="demographic-metrics-grid">
+                    <!-- 属性メトリクスカードはJavaScriptで生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- グラフ分析タブ -->
+        <div id="charts" class="tab-content">
+            <div class="content-header">
+                <h2>詳細分析</h2>
+                <div class="date-range">
+                    グラフで見る応募動向
+                    <button class="toggle-all-btn" onclick="toggleAllCharts()">すべて表示/非表示</button>
+                </div>
+            </div>
+
+            <div class="charts-container" id="charts-container">
+                <!-- チャートはJavaScriptで生成 -->
+            </div>
+        </div>
+
+        <!-- 改善提案タブ -->
+        <div id="suggestions" class="tab-content">
+            <div class="content-header">
+                <h2>改善提案</h2>
+                <div class="date-range">
+                    AI分析による最適化案
+                    <button class="toggle-all-btn" onclick="toggleAllSuggestions()">すべて表示/非表示</button>
+                </div>
+            </div>
+
+            <div class="suggestions-container" id="suggestions-container">
+                <!-- 改善提案はJavaScriptで生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let chartInstances = {};
+        let metricStates = {};
+        let chartStates = {};
+        let suggestionStates = {};
+
+        // 現在日時の設定
+        document.getElementById('current-date').textContent = 
+            new Date().toLocaleDateString('ja-JP', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+
+        // 模擬データ生成
+        function generateMockData() {
+            return {
+                basic: {
+                    sent: { value: 5230, change: 12.3, trend: 'positive' },
+                    opened: { value: 1876, change: 8.7, trend: 'positive' },
+                    openRate: { value: 35.9, change: 2.1, trend: 'positive' },
+                    viewed: { value: 1247, change: -3.2, trend: 'negative' },
+                    viewRate: { value: 66.5, change: -5.1, trend: 'negative' },
+                    interested: { value: 487, change: 1.4, trend: 'positive' },
+                    applications: { value: 234, change: -5.2, trend: 'negative' },
+                    applicationRate: { value: 4.5, change: -0.8, trend: 'negative' },
+                    cvr: { value: 18.8, change: 1.8, trend: 'positive' },
+                    interviews: { value: 87, change: 7.3, trend: 'positive' },
+                    hires: { value: 21, change: 16.7, trend: 'positive' }
+                },
+                demographic: {
+                    avgAge: { value: 31.5, change: 0, trend: 'neutral' },
+                    maleRatio: { value: 61.1, change: -2.3, trend: 'negative' },
+                    femaleRatio: { value: 37.2, change: 2.1, trend: 'positive' },
+                    avgSalary: { value: 485, change: 3.2, trend: 'positive' },
+                    tokyoRatio: { value: 38.0, change: -1.5, trend: 'negative' },
+                    workingRatio: { value: 82.5, change: 4.1, trend: 'positive' }
+                },
+                ageData: {
+                    labels: ['20-24歳', '25-29歳', '30-34歳', '35-39歳', '40-44歳', '45歳以上'],
+                    data: [28, 67, 89, 34, 12, 4],
+                    change: [-15.2, 8.3, 12.1, -5.7, -8.9, -12.5]
+                },
+                genderData: {
+                    labels: ['男性', '女性', 'その他'],
+                    data: [143, 87, 4],
+                    change: [-2.3, 2.1, 0.2]
+                },
+                regionData: {
+                    labels: ['東京都', '大阪府', '愛知県', '神奈川県', '福岡県', 'その他'],
+                    data: [89, 43, 32, 28, 18, 24],
+                    change: [-1.5, 3.2, 5.1, -2.8, 8.7, 1.2]
+                },
+                salaryData: {
+                    labels: ['300万未満', '300-400万', '400-500万', '500-600万', '600-700万', '700万以上'],
+                    data: [18, 47, 78, 52, 28, 11],
+                    change: [-8.3, 2.1, 5.7, 3.2, -1.4, 12.8]
+                },
+                employmentData: {
+                    labels: ['在職中', '離職中'],
+                    data: [193, 41],
+                    change: [4.1, -18.2]
+                },
+                funnelData: {
+                    labels: ['送信', '開封', '閲覧', '気になる', '応募'],
+                    data: [5230, 1876, 1247, 487, 234],
+                    change: [12.3, 8.7, -3.2, 1.4, -5.2]
+                },
+                trendData: {
+                    labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+                    data: {
+                        sent: [856, 923, 798, 1034, 1189, 430],
+                        applications: [32, 41, 28, 47, 56, 30]
+                    },
+                    change: [5.2, 8.1, -13.5, 29.7, 15.0, -63.8]
+                }
+            };
+        }
+
+        // トグルアイコン生成（プラス・マイナス表示）
+        function createToggleIcon(id, type) {
+            const state = getItemState(id, type);
+            const icon = state ? '−' : '+';
+            const className = state ? 'toggle-icon visible' : 'toggle-icon hidden-state';
+            return `<div class="${className}" onclick="toggleItem('${id}', '${type}')">${icon}</div>`;
+        }
+
+        // アイテムの状態取得
+        function getItemState(id, type) {
+            const stateObj = type === 'metric' ? metricStates : 
+                            type === 'chart' ? chartStates : suggestionStates;
+            return stateObj[id] !== false; // 初期値はtrue（表示）
+        }
+
+        // アイテムトグル機能
+        function toggleItem(id, type) {
+            const element = document.getElementById(id);
+            const stateObj = type === 'metric' ? metricStates : 
+                            type === 'chart' ? chartStates : suggestionStates;
+            
+            // 現在の状態を反転
+            stateObj[id] = !getItemState(id, type);
+            
+            // 表示/非表示の切り替え
+            if (stateObj[id]) {
+                element.classList.remove('hidden');
+            } else {
+                element.classList.add('hidden');
+            }
+            
+            // アイコンの更新
+            const toggleIcon = element.querySelector('.toggle-icon');
+            if (stateObj[id]) {
+                toggleIcon.textContent = '−';
+                toggleIcon.className = 'toggle-icon visible';
+            } else {
+                toggleIcon.textContent = '+';
+                toggleIcon.className = 'toggle-icon hidden-state';
+            }
+        }
+
+        // 全体トグル機能
+        function toggleAllMetrics(section) {
+            const prefix = section + '-metric-';
+            const stateObj = metricStates;
+            const allVisible = Object.keys(stateObj).filter(key => key.startsWith(prefix))
+                                     .every(key => getItemState(key, 'metric'));
+            
+            Object.keys(stateObj).forEach(key => {
+                if (key.startsWith(prefix)) {
+                    stateObj[key] = !allVisible;
+                    const element = document.getElementById(key);
+                    const toggleIcon = element.querySelector('.toggle-icon');
+                    
+                    if (stateObj[key]) {
+                        element.classList.remove('hidden');
+                        toggleIcon.textContent = '−';
+                        toggleIcon.className = 'toggle-icon visible';
+                    } else {
+                        element.classList.add('hidden');
+                        toggleIcon.textContent = '+';
+                        toggleIcon.className = 'toggle-icon hidden-state';
+                    }
+                }
+            });
+        }
+
+        function toggleAllCharts() {
+            const allVisible = Object.values(chartStates).every(state => state !== false);
+            Object.keys(chartStates).forEach(key => {
+                chartStates[key] = !allVisible;
+                const element = document.getElementById(key);
+                const toggleIcon = element.querySelector('.toggle-icon');
+                
+                if (chartStates[key]) {
+                    element.classList.remove('hidden');
+                    toggleIcon.textContent = '−';
+                    toggleIcon.className = 'toggle-icon visible';
+                } else {
+                    element.classList.add('hidden');
+                    toggleIcon.textContent = '+';
+                    toggleIcon.className = 'toggle-icon hidden-state';
+                }
+            });
+        }
+
+        function toggleAllSuggestions() {
+            const allVisible = Object.values(suggestionStates).every(state => state !== false);
+            Object.keys(suggestionStates).forEach(key => {
+                suggestionStates[key] = !allVisible;
+                const element = document.getElementById(key);
+                const toggleIcon = element.querySelector('.toggle-icon');
+                
+                if (suggestionStates[key]) {
+                    element.classList.remove('hidden');
+                    toggleIcon.textContent = '−';
+                    toggleIcon.className = 'toggle-icon visible';
+                } else {
+                    element.classList.add('hidden');
+                    toggleIcon.textContent = '+';
+                    toggleIcon.className = 'toggle-icon hidden-state';
+                }
+            });
+        }
+
+        // レポート生成関数
+        function generateReport() {
+            const userInput = document.getElementById('user-input').value;
+            const loadingEl = document.getElementById('loading');
+            const generateBtn = document.querySelector('.generate-btn');
+
+            // ローディング表示
+            loadingEl.style.display = 'block';
+            generateBtn.disabled = true;
+
+            setTimeout(() => {
+                const mockData = generateMockData();
+                
+                // メトリクス生成
+                generateMetrics(mockData);
+                
+                // グラフ生成
+                generateCharts(mockData);
+                
+                // 改善提案生成
+                generateSuggestions(userInput);
+
+                // ローディング非表示
+                loadingEl.style.display = 'none';
+                generateBtn.disabled = false;
+
+                // 応募効果タブに自動切り替え
+                document.querySelector('[data-tab="metrics"]').click();
+            }, 2000);
+        }
+
+        // タブ切り替え機能
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // アクティブタブの切り替え
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // コンテンツの切り替え
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                const targetTab = tab.getAttribute('data-tab');
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+
+        // メトリクス生成
+        function generateMetrics(data) {
+            // 基本効果指標
+            const basicMetricsGrid = document.getElementById('basic-metrics-grid');
+            const basicMetrics = [
+                { key: 'sent', title: '総送信数', value: data.basic.sent.value, unit: '件' },
+                { key: 'opened', title: '開封数', value: data.basic.opened.value, unit: '件' },
+                { key: 'openRate', title: '開封率', value: data.basic.openRate.value, unit: '%' },
+                { key: 'viewed', title: '閲覧数', value: data.basic.viewed.value, unit: '件' },
+                { key: 'viewRate', title: '閲覧率', value: data.basic.viewRate.value, unit: '%' },
+                { key: 'interested', title: '気になる数', value: data.basic.interested.value, unit: '件' },
+                { key: 'applications', title: '応募数', value: data.basic.applications.value, unit: '件' },
+                { key: 'applicationRate', title: '応募率', value: data.basic.applicationRate.value, unit: '%' },
+                { key: 'cvr', title: 'CVR', value: data.basic.cvr.value, unit: '%' },
+                { key: 'interviews', title: '面接数', value: data.basic.interviews.value, unit: '件' },
+                { key: 'hires', title: '採用数', value: data.basic.hires.value, unit: '名' }
+            ];
+
+            basicMetricsGrid.innerHTML = basicMetrics.map(metric => {
+                const metricData = data.basic[metric.key];
+                const id = `basic-metric-${metric.key}`;
+                metricStates[id] = true;
+                const changeText = metricData.change === 0 ? '変化なし' : 
+                    `${metricData.change > 0 ? '+' : ''}${metricData.change}% vs 先月`;
+                const changeClass = metricData.trend === 'positive' ? 'positive' : 
+                                   metricData.trend === 'negative' ? 'negative' : '';
+                
+                return `
+                    <div class="metric-card" id="${id}">
+                        <div class="card-header">
+                            <h3>${metric.title}</h3>
+                            ${createToggleIcon(id, 'metric')}
+                        </div>
+                        <div class="value">${typeof metric.value === 'number' && metric.value >= 1000 ? metric.value.toLocaleString() : metric.value}</div>
+                        <div class="unit">${metric.unit}</div>
+                        <div class="change ${changeClass}">${changeText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // 属性別分析
+            const demographicMetricsGrid = document.getElementById('demographic-metrics-grid');
+            const demographicMetrics = [
+                { key: 'avgAge', title: '平均年齢', value: data.demographic.avgAge.value, unit: '歳' },
+                { key: 'maleRatio', title: '男性比率', value: data.demographic.maleRatio.value, unit: '%' },
+                { key: 'femaleRatio', title: '女性比率', value: data.demographic.femaleRatio.value, unit: '%' },
+                { key: 'avgSalary', title: '平均年収', value: data.demographic.avgSalary.value, unit: '万円' },
+                { key: 'tokyoRatio', title: '東京都比率', value: data.demographic.tokyoRatio.value, unit: '%' },
+                { key: 'workingRatio', title: '在職中比率', value: data.demographic.workingRatio.value, unit: '%' }
+            ];
+
+            demographicMetricsGrid.innerHTML = demographicMetrics.map(metric => {
+                const metricData = data.demographic[metric.key];
+                const id = `demographic-metric-${metric.key}`;
+                metricStates[id] = true;
+                const changeText = metricData.change === 0 ? '変化なし' : 
+                    `${metricData.change > 0 ? '+' : ''}${metricData.change}% vs 先月`;
+                const changeClass = metricData.trend === 'positive' ? 'positive' : 
+                                   metricData.trend === 'negative' ? 'negative' : '';
+                
+                return `
+                    <div class="metric-card" id="${id}">
+                        <div class="card-header">
+                            <h3>${metric.title}</h3>
+                            ${createToggleIcon(id, 'metric')}
+                        </div>
+                        <div class="value">${typeof metric.value === 'number' && metric.value >= 1000 ? metric.value.toLocaleString() : metric.value}</div>
+                        <div class="unit">${metric.unit}</div>
+                        <div class="change ${changeClass}">${changeText}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // グラフ生成
+        function generateCharts(data) {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            };
+
+            const chartsContainer = document.getElementById('charts-container');
+            const chartConfigs = [
+                {
+                    id: 'funnelChart',
+                    title: '応募ファネル分析',
+                    type: 'bar',
+                    data: data.funnelData,
+                    trend: 'mixed'
+                },
+                {
+                    id: 'trendChart',
+                    title: '応募数推移（月別）',
+                    type: 'line',
+                    data: data.trendData,
+                    trend: 'positive'
+                },
+                {
+                    id: 'ageChart',
+                    title: '年齢層別応募状況',
+                    type: 'bar',
+                    data: data.ageData,
+                    trend: 'mixed'
+                },
+                {
+                    id: 'regionChart',
+                    title: '地域別応募分布',
+                    type: 'bar',
+                    data: data.regionData,
+                    trend: 'mixed'
+                },
+                {
+                    id: 'genderChart',
+                    title: '性別応募比率',
+                    type: 'doughnut',
+                    data: data.genderData,
+                    trend: 'mixed'
+                },
+                {
+                    id: 'salaryChart',
+                    title: '年収帯別応募分布',
+                    type: 'bar',
+                    data: data.salaryData,
+                    trend: 'positive'
+                },
+                {
+                    id: 'employmentChart',
+                    title: '就業状況別応募比率',
+                    type: 'doughnut',
+                    data: data.employmentData,
+                    trend: 'positive'
+                }
+            ];
+
+            chartsContainer.innerHTML = chartConfigs.map(config => {
+                chartStates[config.id] = true;
+                return `
+                    <div class="chart-card" id="${config.id}">
+                        <div class="card-header">
+                            <h3>${config.title}</h3>
+                            ${createToggleIcon(config.id, 'chart')}
+                        </div>
+                        <canvas id="${config.id}Canvas" class="chart-canvas"></canvas>
+                    </div>
+                `;
+            }).join('');
+
+            // 各チャートを生成
+            setTimeout(() => {
+                // 応募ファネルグラフ
+                chartInstances.funnelChart = new Chart(document.getElementById('funnelChartCanvas'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.funnelData.labels,
+                        datasets: [{
+                            label: '件数',
+                            data: data.funnelData.data,
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // 応募数推移グラフ
+                chartInstances.trendChart = new Chart(document.getElementById('trendChartCanvas'), {
+                    type: 'line',
+                    data: {
+                        labels: data.trendData.labels,
+                        datasets: [{
+                            label: '送信数',
+                            data: data.trendData.data.sent,
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        }, {
+                            label: '応募数',
+                            data: data.trendData.data.applications,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }]
+                    },
+                    options: {
+                        ...chartOptions,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: {
+                                    drawOnChartArea: false,
+                                },
+                            }
+                        }
+                    }
+                });
+
+                // 年齢層別グラフ
+                chartInstances.ageChart = new Chart(document.getElementById('ageChartCanvas'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.ageData.labels,
+                        datasets: [{
+                            label: '応募数',
+                            data: data.ageData.data,
+                            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // 地域別グラフ
+                chartInstances.regionChart = new Chart(document.getElementById('regionChartCanvas'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.regionData.labels,
+                        datasets: [{
+                            label: '応募数',
+                            data: data.regionData.data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // 性別グラフ
+                chartInstances.genderChart = new Chart(document.getElementById('genderChartCanvas'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.genderData.labels,
+                        datasets: [{
+                            data: data.genderData.data,
+                            backgroundColor: [
+                                'rgba(102, 126, 234, 0.8)',
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(255, 206, 86, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // 年収帯別グラフ
+                chartInstances.salaryChart = new Chart(document.getElementById('salaryChartCanvas'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.salaryData.labels,
+                        datasets: [{
+                            label: '応募数',
+                            data: data.salaryData.data,
+                            backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: chartOptions
+                });
+
+                // 就業状況別グラフ
+                chartInstances.employmentChart = new Chart(document.getElementById('employmentChartCanvas'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.employmentData.labels,
+                        datasets: [{
+                            data: data.employmentData.data,
+                            backgroundColor: [
+                                'rgba(72, 187, 120, 0.8)',
+                                'rgba(245, 101, 101, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }, 100);
+        }
+
+        // 改善提案生成（優先度順にソート）
+        function generateSuggestions(userInput) {
+            const suggestions = [
+                {
+                    id: 'suggestion-1',
+                    title: "開封率の最適化",
+                    content: "現在の開封率35.9%をさらに向上させるため、A/Bテストによる件名最適化と送信時間の調整を実施することを推奨します。特に火曜日10-11時の送信で20%の向上が期待できます。",
+                    priority: "high",
+                    trend: "positive",
+                    priorityValue: 3
+                },
+                {
+                    id: 'suggestion-2',
+                    title: "ターゲティング精度の向上",
+                    content: "30-34歳層の応募率が高い傾向を活用し、この年齢層に特化したペルソナベースのメッセージングを強化することで、効率的な採用活動が可能になります。",
+                    priority: "high",
+                    trend: "positive",
+                    priorityValue: 3
+                },
+                {
+                    id: 'suggestion-7',
+                    title: "高年収層へのアプローチ改善",
+                    content: "年収700万以上の層からの応募が少ない状況を改善するため、キャリアアップ機会や技術的挑戦の訴求を強化することで、ハイクラス人材の獲得を図れます。",
+                    priority: "high",
+                    trend: "negative",
+                    priorityValue: 3
+                },
+                {
+                    id: 'suggestion-3',
+                    title: "CVR改善施策",
+                    content: "閲覧から応募への転換率18.8%の改善余地があります。企業情報の充実化と求人詳細の魅力度向上により、CVRの15%向上が見込めます。",
+                    priority: "medium",
+                    trend: "positive",
+                    priorityValue: 2
+                },
+                {
+                    id: 'suggestion-4',
+                    title: "地域展開戦略の見直し",
+                    content: "東京都以外の地域での応募獲得強化のため、リモートワーク制度や地方優遇制度の訴求を前面に出すことで、地方からの応募を30%増加させることが可能です。",
+                    priority: "medium",
+                    trend: "mixed",
+                    priorityValue: 2
+                },
+                {
+                    id: 'suggestion-6',
+                    title: "女性候補者獲得強化",
+                    content: "現在の女性応募比率37.2%を50%に近づけるため、女性向けの福利厚生制度や働き方の多様性をアピールする専用メッセージの作成を推奨します。",
+                    priority: "medium",
+                    trend: "positive",
+                    priorityValue: 2
+                },
+                {
+                    id: 'suggestion-5',
+                    title: "フォローアップ施策",
+                    content: "「気になる」を押した候補者への定期的なフォローアップメッセージ送信により、応募転換率を8-12%向上させることができます。",
+                    priority: "low",
+                    trend: "positive",
+                    priorityValue: 1
+                }
+            ];
+
+            // 優先度順にソート（高優先度 > 中優先度 > 低優先度）
+            const sortedSuggestions = suggestions.sort((a, b) => b.priorityValue - a.priorityValue);
+
+            const suggestionsContainer = document.getElementById('suggestions-container');
+            suggestionsContainer.innerHTML = sortedSuggestions.map(suggestion => {
+                suggestionStates[suggestion.id] = true;
+                return `
+                    <div class="suggestion-card priority-${suggestion.priority}" id="${suggestion.id}">
+                        <div class="card-header">
+                            <div>
+                                <div class="priority-badge">${
+                                    suggestion.priority === 'high' ? '高優先度' : 
+                                    suggestion.priority === 'medium' ? '中優先度' : '低優先度'
+                                }</div>
+                                <h4>${suggestion.title}</h4>
+                            </div>
+                            ${createToggleIcon(suggestion.id, 'suggestion')}
+                        </div>
+                        <p>${suggestion.content}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
